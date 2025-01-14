@@ -1,0 +1,11 @@
+# Project
+sounddevice==0.5.1
+soundfile==0.13.0
+progressbar2==4.5.0
+
+# Development
+flake8==7.1.1
+ipython==8.31.0
+jupyterlab==4.3.4
+notebook==7.3.2
+pylint==3.3.3
