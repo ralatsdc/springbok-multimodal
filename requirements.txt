@@ -1,4 +1,7 @@
 # Project
+acoular==24.10
+h5py==3.12.1
+matplotlib==3.10.0
 sounddevice==0.5.1
 soundfile==0.13.0
 progressbar2==4.5.0
