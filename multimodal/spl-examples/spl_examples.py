@@ -126,7 +126,7 @@ def compute_SL(samples, S_dB_re_V_per_Pa, gain_dB, r, c):
 def use_audio_samples_to_compute_SL_and_PSD(
     audio_dir,
     dataset,
-    S_dB_re_V_per_μPa,
+    S_dB_re_V_per_Pa,
     gain_dB,
     c,
 ):
@@ -137,7 +137,7 @@ def use_audio_samples_to_compute_SL_and_PSD(
     ----------
     audio_dir : pathlib.Path()
         Path to directory containing audio files
-    S_dB_re_V_per_μPa : float
+    S_dB_re_V_per_Pa : float
         Hydrophone sensitivity [dB re V/Pa]
     gain_dB : float
         Gain applied prior to analog to digital conversion [dB]
@@ -167,7 +167,7 @@ def use_audio_samples_to_compute_SL_and_PSD(
         audio_file = row["filename"]
         samples, sample_rate = sf.read(audio_dir / audio_file)
         SL, PL, MSP, SPL, pressure = compute_SL(
-            samples, S_dB_re_V_per_μPa, gain_dB, distance, SPEED_OF_SOUND
+            samples, S_dB_re_V_per_Pa, gain_dB, distance, SPEED_OF_SOUND
         )
         f, PSD = signal.welch(pressure, fs=sample_rate, nperseg=sample_rate)
         # TODO: Move up to samples?
@@ -387,12 +387,12 @@ def plot_PSDs(results, plot_type, engine_types, archive_dir, plot_file):
                 xW = x1 - x0
                 yW = y1 - y0
                 aT = axs[iRow, iCol].text(
-                    x0 + 0.05 * xW, y0 + 0.05 * yW, f"{SPL[iTyp]:.1f} dB re µPa²"
+                    x0 + 0.05 * xW, y0 + 0.05 * yW, f"{SPL[iTyp]:.1f} dB re Pa²"
                 )
 
             else:
                 axs[iRow, iCol].set_ylim(y0, y1)
-                aT = axs[iRow, iCol].text(x0, 2 * y0, f"{SL[iTyp]:.1f} dB re µPa²m²")
+                aT = axs[iRow, iCol].text(x0, 2 * y0, f"{SL[iTyp]:.1f} dB re Pa²m²")
 
     # Label the axes of the figures of subplots
     if plot_type == "example_p_ts":
@@ -401,7 +401,7 @@ def plot_PSDs(results, plot_type, engine_types, archive_dir, plot_file):
 
     else:
         xL = fig.supxlabel("Frequency [Hz]", fontweight="semibold")
-        yL = fig.supylabel("Pressure Spectral Density [µPa²/Hz]", fontweight="semibold")
+        yL = fig.supylabel("Pressure Spectral Density [Pa²/Hz]", fontweight="semibold")
 
     # Save the figure, then block for user input
     plot_path = archive_dir / plot_file
@@ -420,14 +420,14 @@ def main():
 
     # Use audio samples to compute source level and power spectral
     # density for each recording in the dataset
-    audio_dir = (ARCHIVE_DIR / DATASET_DIR,)
-    S_dB_re_V_per_μPa = AUDIOMOTH_SENSITIVITY
+    audio_dir = ARCHIVE_DIR / DATASET_DIR
+    S_dB_re_V_per_Pa = AUDIOMOTH_SENSITIVITY
     gain_dB = AUDIOMOTH_GAIN
     c = SPEED_OF_SOUND
     results = use_audio_samples_to_compute_SL_and_PSD(
         audio_dir,
         dataset,
-        S_dB_re_V_per_μPa,
+        S_dB_re_V_per_Pa,
         gain_dB,
         c,
     )
