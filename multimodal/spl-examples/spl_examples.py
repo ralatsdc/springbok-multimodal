@@ -55,7 +55,7 @@ def compute_MSP(samples, S_dB_re_V_per_Pa, gain_dB):
     Parameters
     ----------
     samples : numpy.ndarray
-        The audio samples
+        The audio samples [V]
     S_dB_re_V_per_Pa : float
         Microphone sensitivity [dB re V/Pa]
     gain_dB : float
@@ -92,7 +92,7 @@ def compute_SL(samples, S_dB_re_V_per_Pa, gain_dB, r, c):
     Parameters
     ----------
     samples : numpy.ndarray
-        The audio samples
+        The audio samples [V]
     S_dB_re_V_per_Pa : float
         Microphone sensitivity [dB re V/Pa]
     gain_dB : float
@@ -363,7 +363,7 @@ def plot_PSDs(results, plot_type, engine_types, archive_dir, plot_file):
                 axs[iRow, iCol].loglog(f[idx], PSD[idx])
                 if plot_type == "example_psd":
                     axs[iRow, iCol].set_title(
-                        f"{engine_types[iTyp][0:min(len(engine_types[iTyp]), 12)]} ({hex_id[iTyp]})",
+                        f"{engine_types[iTyp][0:min(len(engine_types[iTyp]), 13)]} ({hex_id[iTyp]})",
                         loc="left",
                     )
                 else:
@@ -435,22 +435,30 @@ def main():
     # Write source levels for the specified engine types as a LaTeX
     # table
     tex_file = DATASET_CSV.replace(".csv", "_SLs.tex")
-    write_SLs(results, ENGINE_TYPES, ARCHIVE_DIR, tex_file)
+    engine_types = ENGINE_TYPES
+    archive_dir = ARCHIVE_DIR
+    write_SLs(results, engine_types, archive_dir, tex_file)
 
     # Plot example pressure time series for all engine types
     plot_type = "example_p_ts"
     plot_file = DATASET_CSV.replace(".csv", f"_{plot_type}.pdf")
-    plot_PSDs(results, plot_type, ENGINE_TYPES, ARCHIVE_DIR, plot_file)
+    engine_types = ENGINE_TYPES
+    archive_dir = ARCHIVE_DIR
+    plot_PSDs(results, plot_type, engine_types, archive_dir, plot_file)
 
     # Plot example power spectral densities for all engine types
     plot_type = "example_psd"
     plot_file = DATASET_CSV.replace(".csv", f"_{plot_type}.pdf")
-    plot_PSDs(results, plot_type, ENGINE_TYPES, ARCHIVE_DIR, plot_file)
+    engine_types = ENGINE_TYPES
+    archive_dir = ARCHIVE_DIR
+    plot_PSDs(results, plot_type, engine_types, archive_dir, plot_file)
 
     # Plot average power spectral densities for all engine types
     plot_type = "average_psd"
     plot_file = DATASET_CSV.replace(".csv", f"_{plot_type}.pdf")
-    plot_PSDs(results, plot_type, ENGINE_TYPES, ARCHIVE_DIR, plot_file)
+    engine_types = ENGINE_TYPES
+    archive_dir = ARCHIVE_DIR
+    plot_PSDs(results, plot_type, engine_types, archive_dir, plot_file)
 
     return dataset, results
 
