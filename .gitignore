@@ -1,5 +1,6 @@
 .DS_Store
 .idea
+.ipynb_checkpoints
 .venv
 __pycache__
 cache
