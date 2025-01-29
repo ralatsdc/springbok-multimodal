@@ -8,10 +8,14 @@ from scipy import signal
 import soundfile as sf
 
 
-SPEED_OF_SOUND = 343  # [m/s] - See: https://en.wikipedia.org/wiki/Speed_of_sound
+# See: https://en.wikipedia.org/wiki/Speed_of_sound
+SPEED_OF_SOUND = 343  # [m/s]
 
+# See: https://github.com/OpenAcousticDevices/Datasheets/blob/main/AudioMoth_Dev_1_0_1_Datasheet/AudioMoth_Dev_1_0_1_Datasheet.pdf
 AUDIOMOTH_SENSITIVITY = -38.0  # [dB re V/Pa]
 AUDIOMOTH_GAIN = 15.0  # [dB]
+# See: https://www.openacousticdevices.info/support/device-support/output-units-in-default-mode
+AUDIOMOTH_D_TO_V = 2.5 / (2**16 - 1)  # [V]
 
 ARCHIVE_DIR = Path("2025-01-6-dataset-archive")
 DATASET_DIR = "dataset"
@@ -23,7 +27,32 @@ ENGINE_TYPES = [
     "Turbo-fan",
     "Turbo-prop",
     "Turbo-shaft",
+    "Ambient",
 ]
+
+
+def read_audio_file(audio_dir, audio_file):
+    """Read audio file and convert to Volts.
+
+    Parameters
+    ----------
+    audio_dir : pathlib.Path()
+        Path to directory containing audio files
+    audio_file : str
+        Name of audio file
+    d_to_V : float
+        Conversion from integer samples
+
+    Returns
+    -------
+    samples : numpy.ndarray
+        Audio samples [V]
+    sample_rate : int
+        Audio sample rate [Hz]
+    """
+    isamples, sample_rate = sf.read(audio_dir / audio_file, dtype="int16")
+    fsamples = isamples * AUDIOMOTH_D_TO_V
+    return fsamples, sample_rate
 
 
 def compute_PL(r, c):
@@ -159,21 +188,21 @@ def use_audio_samples_to_compute_SL_and_PSD(
             continue
 
         distance = row["distance"]
+        if engine_type == "Ambient":
+            distance = 1
         if distance == 0:
             continue
 
         # Compute source level, propagation loss, mean square pressure,
         # sound pressure level, and power spectral densitry
         audio_file = row["filename"]
-        samples, sample_rate = sf.read(audio_dir / audio_file)
+        samples, sample_rate = read_audio_file(audio_dir, audio_file)
         SL, PL, MSP, SPL, pressure = compute_SL(
             samples, S_dB_re_V_per_Pa, gain_dB, distance, SPEED_OF_SOUND
-        )
-        f, PSD = signal.welch(pressure, fs=sample_rate, nperseg=sample_rate)
+        )  # [dB re Pa²m²], [dB re m²], [Pa²], [dB re Pa²], [Pa]
+        f, PSD = signal.welch(pressure, fs=sample_rate, nperseg=sample_rate)  # [Hz], [Pa²/Hz]
         # TODO: Move up to samples?
         if f.size == 0:
-            # TODO: Remove
-            breakpoint()
             continue
 
         # Assign and accumulate samples
@@ -181,15 +210,15 @@ def use_audio_samples_to_compute_SL_and_PSD(
         sample = {
             "audio_file": audio_file,
             "hex_id": row["hex_id"],
-            "distance": distance,
-            "sample_rate": sample_rate / q,
-            "pressure": pressure[::q],
-            "SL": SL,
-            "PL": PL,
-            "MSP": MSP,
-            "SPL": SPL,
-            "f": f,
-            "PSD": PSD,
+            "distance": distance,  # [m]
+            "sample_rate": sample_rate / q,  # [Hz]
+            "pressure": pressure[::q],  # [Pa]
+            "SL": SL,  # [dB re Pa²m²]
+            "PL": PL,  # [dB re m²]
+            "MSP": MSP,  # [Pa²]
+            "SPL": SPL,  # [dB re Pa²]
+            "f": f,  # [Hz]
+            "PSD": PSD,  # [Pa²/Hz]
         }
         if engine_type not in results:
             results[engine_type] = {}
@@ -219,8 +248,8 @@ def write_SLs(results, engine_types, archive_dir, tex_file):
     Parameters
     ----------
     results : dict
-        Source levels, and power spectral densities by engine type,
-        with intermediate values
+        Source levels [dB re Pa²m²], and pressure spectral densities
+        [Pa²/Hz] by engine type, with intermediate values
     engine_types : list(str)
         Engine types to write
     archive_dir : pathlib.Path()
@@ -289,8 +318,8 @@ def plot_PSDs(results, plot_type, engine_types, archive_dir, plot_file):
     Parameters
     ----------
     results : dict
-        Source levels, and power spectral densities by engine type,
-        with intermediate values
+        Source levels [dB re Pa²m²], and pressure spectral densities
+        [Pa²/Hz] by engine type, with intermediate values
     plot_type : str
         Type of plot: "example_p_ts" (example pressure time series),
         "example_psd" (examples PSDs), or "average_psd" (averages
@@ -344,7 +373,7 @@ def plot_PSDs(results, plot_type, engine_types, archive_dir, plot_file):
                 SPL.append(item["SPL"])  # Accumulate for labeling
                 pressure = item["pressure"]
                 t = np.arange(pressure.size) / item["sample_rate"]
-                axs[iRow, iCol].plot(t, pressure / 1.0e6)
+                axs[iRow, iCol].plot(t, pressure)
                 axs[iRow, iCol].set_title(
                     f"{engine_types[iTyp][0:min(len(engine_types[iTyp]), 13)]} ({hex_id[iTyp]})",
                     loc="left",
@@ -417,13 +446,14 @@ def main():
     csv_path = ARCHIVE_DIR / DATASET_CSV
     dataset = pd.read_csv(csv_path)
     dataset["engine_type"] = dataset["filename"].apply(lambda fn: fn.split("_")[2])
+    dataset.loc[dataset["engine_type"] == "Unknown", "engine_type"] = "Ambient"
 
     # Use audio samples to compute source level and power spectral
     # density for each recording in the dataset
     audio_dir = ARCHIVE_DIR / DATASET_DIR
     S_dB_re_V_per_Pa = AUDIOMOTH_SENSITIVITY
     gain_dB = AUDIOMOTH_GAIN
-    c = SPEED_OF_SOUND
+    c = SPEED_OF_SOUND  # [m/s]
     results = use_audio_samples_to_compute_SL_and_PSD(
         audio_dir,
         dataset,
