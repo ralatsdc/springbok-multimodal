@@ -1,0 +1,31 @@
+[tool.poetry]
+name = "multimodal"
+version = "0.1.0"
+description = "Explore use of the Acoular framework for acoustic beamforming"
+authors = ["Raymond LeClair <raymond.leclair@gmail.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.14"
+acoular = ">=25.0"
+h5py = ">=3.12"
+matplotlib = ">=3.10"
+sounddevice = ">=0.5"
+soundfile = ">=0.13"
+pandas = ">=2.2"
+progressbar2 = ">=4.5"
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1"
+flake8 = "^7.1"
+ipython = "^8.32"
+jupyterlab = "^4.3"
+mypy = "^1.15"
+notebook = "^7.3"
+pylint = "^3.3"
+pytest = "^8.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
