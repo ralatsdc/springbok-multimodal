@@ -4,9 +4,9 @@ import acoular as ac
 import matplotlib.pyplot as plt
 import numpy
 
-geometry_path = Path("../geometries")
-audio_samples_path = Path("../recordings")
-plots_path = Path("../plots")
+geometry_path = Path("geometries")
+audio_samples_path = Path("recordings")
+plots_path = Path("plots")
 
 # Load and plot mic geometry
 
