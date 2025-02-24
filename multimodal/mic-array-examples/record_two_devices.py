@@ -25,7 +25,8 @@ class Recorder:
         fileformat,
         subtype,
         sampleinterval,
-        # With defaults
+        origin=numpy.array([0.0, 0.0, 0.0]),
+        pointing=None,
         geometry_file="geometries/array_16.xml",
         block_size=128,
         window="Hanning",
@@ -43,7 +44,8 @@ class Recorder:
         self.fileformat = fileformat
         self.subtype = subtype
         self.sampleinterval = sampleinterval
-        # With defaults
+        self.origin = origin
+        self.pointing = pointing
         self.geometry_file = geometry_file
         self.block_size = block_size
         self.window = window
@@ -122,14 +124,19 @@ class Recorder:
             numpy.argmax(self.Lm.T, axis=None), self.Lm.T.shape, order="F"
         )
         print(f"i_max: {i_max}, j_max: {j_max}")
-        print(f"i: {self.rg.x_min + self.rg.increment * i_max}")
-        print(f"j: {self.rg.y_min + self.rg.increment * j_max}")
-        print(
-            f"azm: {numpy.atan2((self.rg.x_min + self.rg.increment * i_max), self.rg.z)}"
-        )
-        print(
-            f"elv: {numpy.atan2((self.rg.y_min + self.rg.increment * j_max), self.rg.z)}"
-        )
+
+        x_max = self.rg.x_min + self.rg.increment * i_max
+        y_max = self.rg.y_min + self.rg.increment * j_max
+        z_max = self.rg.z
+        print(f"x_max: {x_max}, y_max: {y_max}, z_max: {z_max}")
+
+        azm = numpy.atan2(x_max, z_max)
+        elv = numpy.atan2(-y_max, (x_max**2 + z_max**2) ** (1 / 2))
+        print(f"azm: {azm * 180.0 / numpy.pi}")
+        print(f"alv: {elv * 180.0 / numpy.pi}")
+
+        v = numpy.array([x_max, y_max, z_max])
+        self.pointing = v / numpy.linalg.norm(v)
 
     def callback(self, indata, frames, time, status):
         if status:
@@ -149,6 +156,17 @@ class Recorder:
                 time.sleep(1.0e-3)
 
 
+def locate(p1, u1, p2, u2):
+    v3 = numpy.linalg.cross(u2, u1)
+    u3 = v3 / numpy.linalg.norm(v3)
+    a = numpy.array([u1, -u2, u3]).T
+    b = p2 - p1
+    t1, t2, t3 = numpy.linalg.solve(a, b)
+    q1 = p1 + t1 * u1
+    q2 = p2 + t2 * u2
+    return (q1 + q2) / 2
+
+
 def main():
 
     device = "UMA16v2"
@@ -160,6 +178,7 @@ def main():
     # TODO: Is this right?
     subtype = "PCM_16"
     sampleinterval = 1
+    origin = numpy.array([-0.5, 0.0, 0.0])
 
     recorder_one = Recorder(
         device,
@@ -170,43 +189,48 @@ def main():
         fileformat,
         subtype,
         sampleinterval,
+        origin=origin,
         do_form_beam=True,
     )
 
-    # device = "MacBook Pro Microphone"
-    # channels = 1
-    # samplerate = 44100  # Hz
-    # samplegain = 0.0  # dB
-    # fileformat = "AIFF"
-    # filename = f"{device.replace(' ', '-')}-{int(time.time())}.{fileformat.lower()}"
-    # # TODO: Is this right?
-    # subtype = "PCM_16"
-    # sampleinterval = 1
+    device = "UMA16v2"
+    channels = 16
+    samplerate = 48000  # Hz
+    samplegain = 0.0  # dB
+    fileformat = "AIFF"
+    filename = f"{device.replace(' ', '-')}-{int(time.time())}.{fileformat.lower()}"
+    # TODO: Is this right?
+    subtype = "PCM_16"
+    sampleinterval = 1
+    origin = numpy.array([+0.5, 0.0, 0.0])
 
-    # recorder_two = Recorder(
-    #     device,
-    #     channels,
-    #     samplerate,
-    #     samplegain,
-    #     filename,
-    #     fileformat,
-    #     subtype,
-    #     sampleinterval,
-    #     do_form_beam=False,
-    # )
+    recorder_two = Recorder(
+        device,
+        channels,
+        samplerate,
+        samplegain,
+        filename,
+        fileformat,
+        subtype,
+        sampleinterval,
+        origin=origin,
+        do_form_beam=False,
+    )
 
     thread_one = threading.Thread(target=recorder_one.record)
-    # thread_two = threading.Thread(target=recorder_two.record)
+    thread_two = threading.Thread(target=recorder_two.record)
 
     thread_one.daemon = True
-    # thread_two.daemon = True
+    thread_two.daemon = True
 
     thread_one.start()
-    # thread_two.start()
+    thread_two.start()
 
     try:
         print("Hit Ctrl-C to terminate program")
-        while thread_one.is_alive():  # or thread_two.is_alive():
+        while thread_one.is_alive() or thread_two.is_alive():
+
+            # Periodically form beam one
             if (
                 recorder_one.d["frames"] / recorder_one.samplerate
                 > recorder_one.sampleinterval
@@ -217,9 +241,43 @@ def main():
                 recorder_one.d["inpdata"] = numpy.empty((0, recorder_one.channels))
                 recorder_one.d["frames"] = 0
 
+            # Periodically form beam two
+            if (
+                recorder_two.d["frames"] / recorder_two.samplerate
+                > recorder_two.sampleinterval
+            ):
+                if recorder_two.do_form_beam:
+                    recorder_two.form_beam()
+                    recorder_two.plot_beam()
+                recorder_two.d["inpdata"] = numpy.empty((0, recorder_two.channels))
+                recorder_two.d["frames"] = 0
+
+            # Locate whenever able
+            if recorder_one.pointing is not None and recorder_two.pointing is not None:
+                locate(
+                    recorder_one.origin,
+                    recorder_one.pointing,
+                    recorder_two.origin,
+                    recorder_two.pointing,
+                )
+                recorder_one.pointing = None
+                recorder_two.pointing = None
+
     except KeyboardInterrupt:
         print("Program terminated by user.")
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    p1 = numpy.array([-0.5, 0.0, 0.0])
+    p2 = numpy.array([+0.5, 0.0, 0.0])
+
+    v1 = numpy.array([0.5, -0.5, 1.0])
+    v2 = numpy.array([-0.5, -0.5, 1.0])
+
+    u1 = v1 / numpy.linalg.norm(v1)
+    u2 = v2 / numpy.linalg.norm(v2)
+
+    q = locate(p1, u1, p2, u2)
+
+    print(f"q: {q}")
