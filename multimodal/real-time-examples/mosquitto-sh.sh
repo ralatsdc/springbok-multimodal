@@ -1,1 +1,1 @@
-docker exec -it  -u 1883 mos sh
+docker exec -it  -u 1883 mosquitto sh
