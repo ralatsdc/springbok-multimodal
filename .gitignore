@@ -2,8 +2,10 @@
 .idea
 .ipynb_checkpoints
 .venv
+.zshenv
 __pycache__
 cache
 dataset
+passwd
 plots
 recordings
