@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MicArray name="array_64">
+  <!-- Layout notes:
+       (1) Looking at back of microphones with array above electronics
+       (2) Looking along z with x right makes y down
+       (3) Mic numbers:
+        9 10 7 8
+       11 12 5 6
+       13 14 3 4
+       15 16 1 2
+  -->
+  <!-- meters -->
+  <pos Name="Point 01" x="+0.021" y="+0.063" z="+0.0000"/>
+  <pos Name="Point 02" x="+0.063" y="+0.063" z="+0.0000"/>
+  <pos Name="Point 03" x="+0.021" y="+0.021" z="+0.0000"/>
+  <pos Name="Point 04" x="+0.063" y="+0.021" z="+0.0000"/>
+  <pos Name="Point 05" x="+0.021" y="-0.021" z="+0.0000"/>
+  <pos Name="Point 06" x="+0.063" y="-0.021" z="+0.0000"/>
+  <pos Name="Point 07" x="+0.021" y="-0.063" z="+0.0000"/>
+  <pos Name="Point 08" x="+0.063" y="-0.063" z="+0.0000"/>
+  <pos Name="Point 09" x="-0.063" y="-0.063" z="+0.0000"/>
+  <pos Name="Point 10" x="-0.021" y="-0.063" z="+0.0000"/>
+  <pos Name="Point 11" x="-0.063" y="-0.021" z="+0.0000"/>
+  <pos Name="Point 12" x="-0.021" y="-0.021" z="+0.0000"/>
+  <pos Name="Point 13" x="-0.063" y="+0.021" z="+0.0000"/>
+  <pos Name="Point 14" x="-0.021" y="+0.021" z="+0.0000"/>
+  <pos Name="Point 15" x="-0.063" y="+0.063" z="+0.0000"/>
+  <pos Name="Point 16" x="-0.021" y="+0.063" z="+0.0000"/>
+</MicArray>
