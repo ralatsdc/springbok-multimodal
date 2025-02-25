@@ -1,3 +1,5 @@
+import threading
+from pathlib import Path
 import sys
 import time
 
@@ -5,6 +7,7 @@ import acoular as ac
 import matplotlib.pyplot as plt
 import numpy  # Make sure NumPy is loaded before it is used in the callback
 import sounddevice as sd
+import soundfile as sf
 
 assert numpy  # avoid "imported but unused" message (W0611)
 plt.ion()  # enable interactive mode
@@ -69,11 +72,12 @@ class Recorder:
 
         self.Lm = None
 
-        fig, axs = plt.subplots()
-        self.fig = fig
-        self.axs = axs
-        self.fignum = plt.gcf().number
-        self.init_plot()
+        if self.do_plot_beam:
+            fig, axs = plt.subplots()
+            self.fig = fig
+            self.axs = axs
+            self.fignum = plt.gcf().number
+            self.init_plot()
 
     def init_plot(self):
         plt.figure(self.fignum)
@@ -145,3 +149,39 @@ class Recorder:
         ):
             while True:
                 time.sleep(1.0e-3)
+
+
+if __name__ == "__main__":
+    recorder = Recorder(
+        device="MacBook Pro Microphone",
+        channels=1,
+        samplerate=44100,  # Hz
+    )
+    thread = threading.Thread(target=recorder.record)
+    thread.daemon = True
+    thread.start()
+    try:
+        print("Hit Ctrl-C to terminate recorder")
+        while thread.is_alive():
+
+            # Periodically clear recording
+            if recorder.d["frames"] / recorder.samplerate > recorder.sampleinterval:
+                print(
+                    f"Writing then clearing accumulated {recorder.d['frames']} frames"
+                )
+                filename = f"{recorder.device.replace(' ', '-')}-{int(time.time())}.{recorder.fileformat.lower()}"
+                with sf.SoundFile(
+                    Path("recordings") / filename,
+                    mode="x",
+                    samplerate=recorder.samplerate,
+                    channels=recorder.channels,
+                    format=recorder.fileformat,
+                    subtype=recorder.subtype,
+                ) as file:
+                    file.write(recorder.d["inpdata"])
+                recorder.d["inpdata"] = numpy.empty((0, recorder.channels))
+                recorder.d["frames"] = 0
+
+    except KeyboardInterrupt:
+        print("\n")
+        print("Program terminated by user.")

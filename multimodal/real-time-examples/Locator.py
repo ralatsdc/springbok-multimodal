@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 
 import numpy  # Make sure NumPy is loaded before it is used in the callback
@@ -8,7 +9,7 @@ from Subscriber import Subscriber
 assert numpy  # avoid "imported but unused" message (W0611)
 
 
-class Locator:
+class Locater:
 
     @staticmethod
     def locate(p1, u1, p2, u2):
@@ -62,3 +63,19 @@ class Locator:
         print(
             f"on_message {msg.topic} - qos {str(msg.qos)} - payload {str(msg.payload)}"
         )
+
+
+if __name__ == "__main__":
+    locater = Locater()
+    try:
+        locater.subscriber.connect()
+        locater.subscriber.subscribe()
+        while True:
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        print("\n")
+        locater.subscriber.disconnect()
+
+    except Exception as e:
+        print(f"Exiting due to exception {e}")

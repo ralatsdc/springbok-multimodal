@@ -67,6 +67,24 @@ class Publisher:
         infot = self.mqttc.publish(self.topic, message, qos=self.qos)
         infot.wait_for_publish()
 
-    def disconnet(self):
+    def disconnect(self):
         print(f"Disconnecting from host {self.host} on port {self.port}")
         self.mqttc.disconnect()
+
+
+if __name__ == "__main__":
+    publisher = Publisher()
+    try:
+        publisher.connect()
+        while True:
+            message = str(datetime.now())
+            print(f"Publishing message {message}")
+            publisher.publish(message)
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        print("\n")
+        publisher.disconnect()
+
+    except Exception as e:
+        print(f"Exiting due to exception {e}")

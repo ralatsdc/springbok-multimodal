@@ -110,15 +110,17 @@ class Listener:
             delay=self.delay,
         )
 
-    def listener(self):
-        thread = threading.Thread(target=self.recorder.record)
-        thread.daemon = True
-        thread.start()
+    def listen(self):
         try:
+            self.publisher.connect()
+            thread = threading.Thread(target=self.recorder.record)
+            thread.daemon = True
+            thread.start()
             print("Hit Ctrl-C to terminate listener")
             while thread.is_alive():
 
-                # Periodically form beam one
+                # Periodically form and plot beam, if required,
+                # publish pointing, then clear accumulated samples
                 if (
                     self.recorder.d["frames"] / self.recorder.samplerate
                     > self.recorder.sampleinterval
@@ -127,11 +129,21 @@ class Listener:
                         self.recorder.form_beam()
                         if self.recorder.do_plot_beam:
                             self.recorder.plot_beam()
-                        self.publisher.publish(str(self.recorder.pointing))
+                    self.publisher.publish(str(self.recorder.pointing))
                     self.recorder.d["inpdata"] = numpy.empty(
                         (0, self.recorder.channels)
                     )
                     self.recorder.d["frames"] = 0
 
         except KeyboardInterrupt:
-            print("Program terminated by user.")
+            print("\n")
+            self.publisher.disconnect()
+
+
+if __name__ == "__main__":
+    listener = Listener(
+        device="MacBook Pro Microphone",
+        channels=1,
+        samplerate=44100,  # Hz
+    )
+    listener.listen()

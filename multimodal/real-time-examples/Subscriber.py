@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 
 import paho.mqtt.client as mqtt
@@ -64,6 +65,22 @@ class Subscriber:
         self.mqttc.subscribe(self.topic, self.qos)
         self.mqttc.loop_forever()
 
-    def disconnet(self):
+    def disconnect(self):
         print(f"Disconnecting from host {self.host} on port {self.port}")
         self.mqttc.disconnect()
+
+
+if __name__ == "__main__":
+    subscriber = Subscriber()
+    try:
+        subscriber.connect()
+        subscriber.subscribe()
+        while True:
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        print("\n")
+        subscriber.disconnect()
+
+    except Exception as e:
+        print(f"Exiting due to exception {e}")
