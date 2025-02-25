@@ -73,7 +73,7 @@ class Publisher:
 
 
 if __name__ == "__main__":
-    publisher = Publisher()
+    publisher = Publisher(host="44.220.217.88")
     try:
         publisher.connect()
         while True:

@@ -71,7 +71,7 @@ class Subscriber:
 
 
 if __name__ == "__main__":
-    subscriber = Subscriber()
+    subscriber = Subscriber(host="44.220.217.88")
     try:
         subscriber.connect()
         subscriber.subscribe()

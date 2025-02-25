@@ -145,5 +145,6 @@ if __name__ == "__main__":
         device="MacBook Pro Microphone",
         channels=1,
         samplerate=44100,  # Hz
+        host="44.220.217.88",
     )
     listener.listen()

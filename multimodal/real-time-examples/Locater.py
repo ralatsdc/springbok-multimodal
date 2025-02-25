@@ -66,7 +66,7 @@ class Locater:
 
 
 if __name__ == "__main__":
-    locater = Locater()
+    locater = Locater(host="44.220.217.88")
     try:
         locater.subscriber.connect()
         locater.subscriber.subscribe()
