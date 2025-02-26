@@ -59,11 +59,32 @@ class Locater:
 
         self.subscriber.mqttc.on_message = self.on_message
 
+        self.pointing = {}
+
     # TODO: Call locate() after receiving messages from two publishers
     def on_message(self, mqttc, obj, msg):
-        pointing = numpy.array(json.loads(msg.payload.decode('utf-8')))
+        message = json.loads(msg.payload.decode('utf-8'))
+        clientid = message["clientid"]
+        origin = numpy.array(message["origin"])
+        pointing = numpy.array(message["pointing"])
+        if clientid not in self.pointing:
+            self.pointing[clientid] = {}
+        self.pointing[clientid]["origin"] = origin
+        self.pointing[clientid]["pointing"] = pointing
+        if len(self.pointing) == 2:
+            clientids = list(self.pointing.keys())
+            p1 = self.pointing[clientids[0]]["origin"]
+            u1 = self.pointing[clientids[0]]["pointing"]
+            p2 = self.pointing[clientids[1]]["origin"]
+            u2 = self.pointing[clientids[1]]["pointing"]
+            location = Locater.locate(p1, u1, p2, u2)
+            print(f"Locator finds location {location}")
+
+        elif len(self.pointing) > 2:
+            raise Exception("Locate expects two, and only two listeners")
+            
         print(
-            f"on_message {msg.topic} - qos {str(msg.qos)} - payload {pointing}"
+            f"on_message {msg.topic} - qos {str(msg.qos)} - clientid {clientid} - pointing {pointing}"
         )
 
 

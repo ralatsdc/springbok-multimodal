@@ -130,7 +130,11 @@ class Listener:
                         self.recorder.form_beam()
                         if self.recorder.do_plot_beam:
                             self.recorder.plot_beam()
-                    self.publisher.publish(json.dumps(self.recorder.pointing.tolist()))
+                    message = {}
+                    message["clientid"] = self.clientid
+                    message["origin"] = self.recorder.origin.tolist()
+                    message["pointing"] = self.recorder.pointing.tolist()
+                    self.publisher.publish(json.dumps(message))
                     self.recorder.d["inpdata"] = numpy.empty(
                         (0, self.recorder.channels)
                     )
