@@ -1,6 +1,6 @@
+import threading
 from pathlib import Path
 import sys
-import threading
 import time
 
 import acoular as ac
@@ -17,15 +17,14 @@ class Recorder:
 
     def __init__(
         self,
-        device,
-        channels,
-        samplerate,
-        samplegain,
-        filename,
-        fileformat,
-        subtype,
-        sampleinterval,
-        origin=numpy.array([0.0, 0.0, 0.0]),
+        device="UMA16v2",
+        channels=16,
+        samplerate=48000,  # Hz
+        samplegain=0.0,  # dB
+        fileformat="AIFF",
+        subtype="PCM_16",  # TODO: Is this right?
+        sampleinterval=1,
+        origin=numpy.array([-0.5, 0.0, 0.0]),
         pointing=None,
         geometry_file="geometries/array_16.xml",
         block_size=128,
@@ -35,12 +34,12 @@ class Recorder:
         freq=4120,
         n_bands=3,
         do_form_beam=False,
+        do_plot_beam=False,
     ):
         self.device = device
         self.channels = channels
         self.samplerate = samplerate  # Hz
         self.samplegain = samplegain  # dB
-        self.filename = filename
         self.fileformat = fileformat
         self.subtype = subtype
         self.sampleinterval = sampleinterval
@@ -54,6 +53,7 @@ class Recorder:
         self.freq = freq  # Hz
         self.n_bands = n_bands
         self.do_form_beam = do_form_beam
+        self.do_plot_beam = do_plot_beam
 
         self.mg = ac.MicGeom(from_file=geometry_file)
         self.rg = ac.RectGrid(
@@ -72,11 +72,12 @@ class Recorder:
 
         self.Lm = None
 
-        fig, axs = plt.subplots()
-        self.fig = fig
-        self.axs = axs
-        self.fignum = plt.gcf().number
-        self.init_plot()
+        if self.do_plot_beam:
+            fig, axs = plt.subplots()
+            self.fig = fig
+            self.axs = axs
+            self.fignum = plt.gcf().number
+            self.init_plot()
 
     def init_plot(self):
         plt.figure(self.fignum)
@@ -108,12 +109,6 @@ class Recorder:
 
     def form_beam(self):
         sample_data = self.d["inpdata"]
-        # TODO: Remove
-        # audio_samples_file = Path("recordings") / (
-        #     "A10F41_1734652691_Reciprocating_1_1_698_22_audiomoth_manasas"
-        #     + "_right_1s+35db.npy"
-        # )
-        # sample_data = numpy.load(audio_samples_file)
         ts = ac.TimeSamples(data=sample_data, sample_freq=self.samplerate)
         ps = ac.PowerSpectra(source=ts, block_size=self.block_size, window=self.window)
         bb = ac.BeamformerBase(freq_data=ps, steer=self.st)
@@ -156,128 +151,37 @@ class Recorder:
                 time.sleep(1.0e-3)
 
 
-def locate(p1, u1, p2, u2):
-    v3 = numpy.linalg.cross(u2, u1)
-    u3 = v3 / numpy.linalg.norm(v3)
-    a = numpy.array([u1, -u2, u3]).T
-    b = p2 - p1
-    t1, t2, t3 = numpy.linalg.solve(a, b)
-    q1 = p1 + t1 * u1
-    q2 = p2 + t2 * u2
-    return (q1 + q2) / 2
-
-
-def main():
-
-    device = "UMA16v2"
-    channels = 16
-    samplerate = 48000  # Hz
-    samplegain = 0.0  # dB
-    fileformat = "AIFF"
-    filename = f"{device.replace(' ', '-')}-{int(time.time())}.{fileformat.lower()}"
-    # TODO: Is this right?
-    subtype = "PCM_16"
-    sampleinterval = 1
-    origin = numpy.array([-0.5, 0.0, 0.0])
-
-    recorder_one = Recorder(
-        device,
-        channels,
-        samplerate,
-        samplegain,
-        filename,
-        fileformat,
-        subtype,
-        sampleinterval,
-        origin=origin,
-        do_form_beam=True,
+if __name__ == "__main__":
+    recorder = Recorder(
+        device="MacBook Pro Microphone",
+        channels=1,
+        samplerate=44100,  # Hz
     )
-
-    device = "UMA16v2"
-    channels = 16
-    samplerate = 48000  # Hz
-    samplegain = 0.0  # dB
-    fileformat = "AIFF"
-    filename = f"{device.replace(' ', '-')}-{int(time.time())}.{fileformat.lower()}"
-    # TODO: Is this right?
-    subtype = "PCM_16"
-    sampleinterval = 1
-    origin = numpy.array([+0.5, 0.0, 0.0])
-
-    recorder_two = Recorder(
-        device,
-        channels,
-        samplerate,
-        samplegain,
-        filename,
-        fileformat,
-        subtype,
-        sampleinterval,
-        origin=origin,
-        do_form_beam=True,
-    )
-
-    thread_one = threading.Thread(target=recorder_one.record)
-    thread_two = threading.Thread(target=recorder_two.record)
-
-    thread_one.daemon = True
-    thread_two.daemon = True
-
-    thread_one.start()
-    thread_two.start()
-
+    thread = threading.Thread(target=recorder.record)
+    thread.daemon = True
+    thread.start()
     try:
-        print("Hit Ctrl-C to terminate program")
-        while thread_one.is_alive() or thread_two.is_alive():
+        print("Hit Ctrl-C to terminate recorder")
+        while thread.is_alive():
 
-            # Periodically form beam one
-            if (
-                recorder_one.d["frames"] / recorder_one.samplerate
-                > recorder_one.sampleinterval
-            ):
-                if recorder_one.do_form_beam:
-                    recorder_one.form_beam()
-                    recorder_one.plot_beam()
-                recorder_one.d["inpdata"] = numpy.empty((0, recorder_one.channels))
-                recorder_one.d["frames"] = 0
-
-            # Periodically form beam two
-            if (
-                recorder_two.d["frames"] / recorder_two.samplerate
-                > recorder_two.sampleinterval
-            ):
-                if recorder_two.do_form_beam:
-                    recorder_two.form_beam()
-                    recorder_two.plot_beam()
-                recorder_two.d["inpdata"] = numpy.empty((0, recorder_two.channels))
-                recorder_two.d["frames"] = 0
-
-            # Locate whenever able
-            if recorder_one.pointing is not None and recorder_two.pointing is not None:
-                locate(
-                    recorder_one.origin,
-                    recorder_one.pointing,
-                    recorder_two.origin,
-                    recorder_two.pointing,
+            # Periodically clear recording
+            if recorder.d["frames"] / recorder.samplerate > recorder.sampleinterval:
+                print(
+                    f"Writing then clearing accumulated {recorder.d['frames']} frames"
                 )
-                recorder_one.pointing = None
-                recorder_two.pointing = None
+                filename = f"{recorder.device.replace(' ', '-')}-{int(time.time())}.{recorder.fileformat.lower()}"
+                with sf.SoundFile(
+                    Path("recordings") / filename,
+                    mode="x",
+                    samplerate=recorder.samplerate,
+                    channels=recorder.channels,
+                    format=recorder.fileformat,
+                    subtype=recorder.subtype,
+                ) as file:
+                    file.write(recorder.d["inpdata"])
+                recorder.d["inpdata"] = numpy.empty((0, recorder.channels))
+                recorder.d["frames"] = 0
 
     except KeyboardInterrupt:
+        print("\n")
         print("Program terminated by user.")
-
-
-if __name__ == "__main__":
-    # main()
-    p1 = numpy.array([-0.5, 0.0, 0.0])
-    p2 = numpy.array([+0.5, 0.0, 0.0])
-
-    v1 = numpy.array([0.5, -0.5, 1.0])
-    v2 = numpy.array([-0.5, -0.5, 1.0])
-
-    u1 = v1 / numpy.linalg.norm(v1)
-    u2 = v2 / numpy.linalg.norm(v2)
-
-    q = locate(p1, u1, p2, u2)
-
-    print(f"q: {q}")

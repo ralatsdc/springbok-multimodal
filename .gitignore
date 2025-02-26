@@ -1,9 +1,12 @@
 .DS_Store
 .idea
 .ipynb_checkpoints
+.poetry
 .venv
+.zshenv
 __pycache__
 cache
 dataset
+passwd
 plots
 recordings
