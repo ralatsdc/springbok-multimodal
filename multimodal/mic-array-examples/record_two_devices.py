@@ -214,7 +214,7 @@ def main():
         subtype,
         sampleinterval,
         origin=origin,
-        do_form_beam=False,
+        do_form_beam=True,
     )
 
     thread_one = threading.Thread(target=recorder_one.record)

@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import uuid
@@ -56,12 +57,13 @@ class Locater:
             qos=self.qos,
         )
 
-        self.subscriber.on_message = self.on_message
+        self.subscriber.mqttc.on_message = self.on_message
 
     # TODO: Call locate() after receiving messages from two publishers
     def on_message(self, mqttc, obj, msg):
+        pointing = numpy.array(json.loads(msg.payload.decode('utf-8')))
         print(
-            f"on_message {msg.topic} - qos {str(msg.qos)} - payload {str(msg.payload)}"
+            f"on_message {msg.topic} - qos {str(msg.qos)} - payload {pointing}"
         )
 
 

@@ -1,3 +1,4 @@
+import json
 import os
 import threading
 import uuid
@@ -129,7 +130,7 @@ class Listener:
                         self.recorder.form_beam()
                         if self.recorder.do_plot_beam:
                             self.recorder.plot_beam()
-                    self.publisher.publish(str(self.recorder.pointing))
+                    self.publisher.publish(json.dumps(self.recorder.pointing.tolist()))
                     self.recorder.d["inpdata"] = numpy.empty(
                         (0, self.recorder.channels)
                     )
@@ -142,9 +143,7 @@ class Listener:
 
 if __name__ == "__main__":
     listener = Listener(
-        device="MacBook Pro Microphone",
-        channels=1,
-        samplerate=44100,  # Hz
+        do_form_beam=True,
         host="44.220.217.88",
     )
     listener.listen()
